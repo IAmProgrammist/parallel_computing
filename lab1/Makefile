@@ -7,6 +7,9 @@ CFLAGS=-c -Wall
 # Флаги линковки
 LDFLAGS=-pthread
 
+# Оверрайд переменных компиляции
+DFLAGS="-DNUM_THREADS=2"
+
 # Имя исполняемого файла
 EXECUTABLE=lab1
 
@@ -26,7 +29,7 @@ $(EXECUTABLE): $(OBJECTS)
 
 # Задача по компиляции, компилирует все .c файлы в .o
 %.o : %.c
-	$(CC) -c $(CFLAGS) $< -o $@
+	$(CC) $(DFLAGS) -c $(CFLAGS) $< -o $@
 
 clean:
 	rm -rf *.o $(EXECUTABLE)

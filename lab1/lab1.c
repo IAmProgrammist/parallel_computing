@@ -6,48 +6,38 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <math.h>
-#define NUM_THREADS 3
+
+#ifndef NUM_THREADS
+#define NUM_THREADS 4
+#endif
+
 #define NUM_ITERATIONS 10000000
 
-volatile long double component_a = 0;
-volatile long double component_b = 0;
-volatile long double component_c = 0;
+volatile long double sums[NUM_THREADS];
 
-typedef void *(*ComponentComputer)(void *arg);
-
-void *compute_component_a(void *arg)
+long double factorial(const long double n)
 {
-    long double iter_factorial = 1;
-    for (uint64_t iter = 0; iter < NUM_ITERATIONS; iter++)
+    long double f = 1;
+    for (long double i = 1; i <= n; ++i)
+        f *= i;
+    return f;
+}
+
+void *compute(void *arg)
+{
+    size_t iteration_num = (size_t)arg;
+    size_t lower_bound = (NUM_ITERATIONS / NUM_THREADS) * iteration_num + 1;
+    size_t upper_bound = (NUM_ITERATIONS / NUM_THREADS) * (iteration_num + 1) + 1;
+
+    long double iter_factorial = factorial(lower_bound);
+
+    for (uint64_t iter = lower_bound; iter < upper_bound; iter++)
     {
-        component_a += (cos(pow(iter, 3))) /
-                       (sqrt(iter * iter + tan(iter) + 1) + iter_factorial);
+        sums[iteration_num] += (cos(pow(iter, 3)) + pow(iter, 4) * exp(-iter) + log(iter + 1)) /
+               (sqrt(iter * iter + tan(iter) + 1) + iter_factorial);
         iter_factorial *= iter;
     }
 }
-
-void *compute_component_b(void *arg)
-{
-    long double iter_factorial = 1;
-    for (uint64_t iter = 0; iter < NUM_ITERATIONS; iter++)
-    {
-        component_b += (pow(iter, 4) * exp(-iter)) /
-                       (sqrt(iter * iter + tan(iter) + 1) + iter_factorial);
-        iter_factorial *= iter;
-    }
-}
-
-void *compute_component_c(void *arg)
-{
-    long double iter_factorial = 1;
-    for (uint64_t iter = 0; iter < NUM_ITERATIONS; iter++)
-    {
-        component_c += (log(iter + 1)) /
-                       (sqrt(iter * iter + tan(iter) + 1) + iter_factorial);
-        iter_factorial *= iter;
-    }
-}
-
 // Принудительное закрепление потока за конкретным ядром
 void pin_thread_to_core(int core_id)
 {
@@ -58,27 +48,12 @@ void pin_thread_to_core(int core_id)
     pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);
 }
 
-void *compute_pinned_a(void *arg)
+void *compute_pinned(void *arg)
 {
     int core_id = (int)(long)arg;
     pin_thread_to_core(core_id);
-    return compute_component_a(arg);
+    return compute(arg);
 }
-
-void *compute_pinned_b(void *arg)
-{
-    int core_id = (int)(long)arg;
-    pin_thread_to_core(core_id);
-    return compute_component_b(arg);
-}
-
-void *compute_pinned_c(void *arg)
-{
-    int core_id = (int)(long)arg;
-    pin_thread_to_core(core_id);
-    return compute_component_c(arg);
-}
-
 int main(int argc, char *argv[])
 {
     pthread_t threads[NUM_THREADS];
@@ -93,24 +68,25 @@ int main(int argc, char *argv[])
     int mode = atoi(argv[1]);
     printf("Старт: %s, %d поток(а)(ов)...\n",
            mode == 1 ? "конкурентность, одно ядро" : "параллелизм, разные ядра", NUM_THREADS);
-
-    if (mode == 1)
+    for (size_t iter = 0; iter < NUM_THREADS; iter++)
     {
-        pthread_create(&threads[0], NULL, compute_component_a, (void *)0);
-        pthread_create(&threads[1], NULL, compute_component_b, (void *)1);
-        pthread_create(&threads[2], NULL, compute_component_c, (void *)2);
+        sums[iter] = 0;
+        if (mode == 1)
+        {
+            pthread_create(&threads[iter], NULL, compute, (void *)iter);
+        }
+        else
+        {
+            pthread_create(&threads[iter], NULL, compute_pinned, (void *)iter);
+        }
     }
-    else
-    {
-        pthread_create(&threads[0], NULL, compute_pinned_a, (void *)0);
-        pthread_create(&threads[1], NULL, compute_pinned_b, (void *)1);
-        pthread_create(&threads[2], NULL, compute_pinned_c, (void *)2);
-    }
-
     for (size_t iter = 0; iter < NUM_THREADS; iter++)
         pthread_join(threads[iter], NULL);
     
-    long double sum = component_a + component_b + component_c;
+    long double sum = 0;
+    for (int i = 0; i < NUM_THREADS; i++) {
+        sum += sums[i];
+    }
 
     return EXIT_SUCCESS;
 }
