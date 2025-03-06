@@ -21,7 +21,7 @@ int main()
 
 #pragma omp parallel
     {
-#pragma omp for schedule(auto)
+#pragma omp for schedule(guided)
         for (int i = 0; i < NUM_ITERATIONS; i++)
         {
             sums[i] = (cos(pow(i, 3)) + pow(i, 4) * exp(-i) + log(i + 1)) /
