@@ -72,10 +72,24 @@
 // #![allow()]
 
 use clap::Parser;
+use opencl3::error_codes::ClError;
 
+use std::fs::File;
+use std::io::Read;
 use std::path::PathBuf;
 
 use spirv_builder::{MetadataPrintout, SpirvBuilder};
+
+// OpenCL libs
+use opencl3::Result;
+use opencl3::command_queue::{CL_QUEUE_PROFILING_ENABLE, CommandQueue};
+use opencl3::context::Context;
+use opencl3::device::{get_all_devices, Device, CL_DEVICE_TYPE_ALL, CL_DEVICE_TYPE_GPU};
+use opencl3::kernel::{ExecuteKernel, Kernel};
+use opencl3::memory::{Buffer, CL_MEM_READ_ONLY, CL_MEM_WRITE_ONLY};
+use opencl3::program::Program;
+use opencl3::types::{CL_BLOCKING, CL_NON_BLOCKING, cl_event, cl_float};
+use std::ptr;
 
 #[derive(Debug, Parser)]
 #[command()]
@@ -85,8 +99,50 @@ pub struct Options {
     debug_layer: bool,
 }
 
+pub struct OpenCLBinaries {
+    pub program: Program,
+    pub kernel: Kernel,
+}
+
 pub fn main() {
-    let shaders = compile_shaders();
+    // Find a usable device for this application
+    let device_id = *get_all_devices(CL_DEVICE_TYPE_ALL)
+        .expect("No available devices found")
+        .first()
+        .expect("No available devices found");
+    let device = Device::new(device_id);
+
+    // Create a Context on an OpenCL device
+    let context = Context::from_device(&device).expect("Context::from_device failed");
+
+    // Create a command_queue on the Context's device
+    let queue = CommandQueue::create_default(&context, CL_QUEUE_PROFILING_ENABLE)
+        .expect("CommandQueue::create_default failed");
+
+
+    // Translate shaders into SPIR-V
+    let shaders: Vec<OpenCLBinaries> = compile_shaders()
+        .iter()
+        .map(|file| -> OpenCLBinaries {
+            let mut f = File::open(file.data.to_str().unwrap())
+            .expect("Couln't open SPIR-V binary");
+            let mut spirv_shader = String::new();
+
+            f.read_to_string(&mut spirv_shader)
+            .expect("Reading SPIR-V binary failed");
+
+            // Build the OpenCL program source and create the kernel.
+            let program = Program::create_and_build_from_source(&context, &spirv_shader, "")
+                .expect("Program::create_and_build_from_source failed");
+            let kernel = Kernel::create(&program, file.name.as_str())
+            .expect("Kernel::create failed");
+
+            OpenCLBinaries {
+                program: program,
+                kernel: kernel,
+            }
+        })
+        .collect();
 }
 
 pub fn compile_shaders() -> Vec<SpvFile> {

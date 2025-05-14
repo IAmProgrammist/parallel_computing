@@ -18,5 +18,9 @@ clap = { version = "4", features = ["derive"] }
 cfg-if = "1.0.0"
 spirv-builder = { workspace = true, default-features = false }
 
+[dependencies.opencl3]
+version = "0.11"
+features = ["CL_VERSION_3_0"]
+
 [target.'cfg(target_os = "macos")'.dependencies]
 ash-molten = { version = "0.20", features = ["pre-built"] }
