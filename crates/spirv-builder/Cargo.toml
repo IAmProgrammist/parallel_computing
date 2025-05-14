@@ -1,0 +1,50 @@
+[package]
+name = "spirv-builder"
+description = "Helper for building shaders with rust-gpu"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# HACK(eddyb) allow `docs.rs` to build this crate by making `rustc_codegen_spirv`
+# dependency optional in a way that will always result in it being enabled
+# during normal builds (as `use-{installed,compiled}-tools` both require it),
+# and produces a compile-time error if it's missing and `cfg(doc)` isn't set.
+[package.metadata.docs.rs]
+no-default-features = true
+
+# NOTE(eddyb) the `dep:` prefixes used here prevents a feature with the name as
+# that optional dependency, from being automatically created by Cargo, see:
+# https://doc.rust-lang.org/cargo/reference/features.html#optional-dependencies
+[features]
+default = ["use-compiled-tools"]
+# Compile `rustc_codegen_spirv`, allows constructing SpirvBuilder without
+# explicitly passing in a path to a compiled `rustc_codegen_spirv.so` (or dll)
+rustc_codegen_spirv = ["dep:rustc_codegen_spirv"]
+# See `rustc_codegen_spirv/Cargo.toml` for details on these features.
+use-installed-tools = ["rustc_codegen_spirv", "rustc_codegen_spirv?/use-installed-tools"]
+use-compiled-tools = ["rustc_codegen_spirv", "rustc_codegen_spirv?/use-compiled-tools"]
+skip-toolchain-check = ["rustc_codegen_spirv?/skip-toolchain-check"]
+
+watch = ["dep:notify"]
+clap = ["dep:clap"]
+
+[dependencies]
+# See comment in `src/lib.rs` `invoke_rustc` regarding `rustc_codegen_spirv` dep.
+rustc_codegen_spirv.workspace = true
+# HACK(eddyb) see `docs.rs`-related comment above for why this is optional.
+rustc_codegen_spirv.optional = true
+
+rustc_codegen_spirv-types.workspace = true
+
+memchr = "2.4"
+raw-string = "0.3.5"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0.12"
+semver = { version = "1.0.24", features = ["serde"] }
+
+notify = { version = "7.0", optional = true }
+# Pinning clap, as newer versions have raised min rustc version without being marked a breaking change
+clap = { version = "=4.5.37", optional = true, features = ["derive"] }

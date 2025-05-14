@@ -1,0 +1,80 @@
+[package]
+name = "rustc_codegen_spirv"
+description = "SPIR-V code generator backend for rustc"
+documentation = "https://rust-gpu.github.io/rust-gpu/api/rustc_codegen_spirv/index.html"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["dylib"]
+
+[features]
+# By default, the use-compiled-tools is enabled, as doesn't require additional
+# setup steps for the user. This does however mean that you will need to disable
+# default features and explicitly enable `use-installed-tools` if you are using
+# this in an environment with spirv-tools in PATH, and you don't want to take
+# the compile time cost
+default = ["use-compiled-tools"]
+# If enabled, uses spirv-tools binaries installed in PATH, instead of
+# compiling and linking the spirv-tools C++ code
+use-installed-tools = ["spirv-tools/use-installed-tools"]
+# If enabled will compile and link the C++ code for the spirv tools, the compiled
+# version is preferred if both this and `use-installed-tools` are enabled
+use-compiled-tools = ["spirv-tools/use-compiled-tools"]
+# If enabled, this will not check whether the current rustc version is set to the
+# appropriate channel. rustc_cogeden_spirv requires a specific nightly version,
+# and will likely produce compile errors when built against a different toolchain.
+# Enable this feature to be able to experiment with other versions.
+skip-toolchain-check = []
+
+[dependencies]
+# HACK(eddyb) these only exist to unify features across dependency trees,
+# in order to avoid multiple separate instances of `rustc_codegen_spirv`.
+ahash = { version = "0.8.11", features = ["no-rng"] }
+bytemuck = { version = "1.20.0", features = ["aarch64_simd", "derive"] }
+log = { version = "0.4.22", features = ["std"] }
+regex = { version = "1", features = ["perf"] }
+rustix = { version = "0.38.42", features = ["all-apis"] }
+
+# HACK(eddyb) deps of `rustc_codegen_ssa`, for `pqp_cg_ssa` (see `build.rs`),
+# that cannot be handled with just `extern crate` pulling out of the sysroot.
+object = { version = "0.36.2",  default-features = false, features = ["read_core", "elf", "macho", "pe", "xcoff", "unaligned", "archive", "write", "wasm"] }
+thorin-dwp = "0.8"
+
+# Normal dependencies.
+ar = "0.9.0"
+either = "1.8.0"
+indexmap = "2.6.0"
+rspirv = "0.12"
+rustc_codegen_spirv-types.workspace = true
+rustc-demangle = "0.1.21"
+sanitize-filename = "0.4"
+smallvec = { version = "1.6.1", features = ["const_generics", "const_new", "union"] }
+spirt = "0.4.0"
+spirv-tools.workspace = true
+lazy_static = "1.4.0"
+itertools = "0.10.5"
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tracing-tree = "0.3.0"
+
+[dev-dependencies]
+pretty_assertions = "1.0"
+
+# HACK(eddyb) can't re-introduce deps of `rustc_codegen_ssa`, for `pqp_cg_ssa`
+# (see `build.rs`).
+# tempfile = "3.4"
+
+# HACK(eddyb) deps of `rustc_codegen_ssa`, for `pqp_cg_ssa` (see `build.rs`),
+# that cannot be handled with just `extern crate` pulling out of the sysroot.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2.50"
+
+# Note that in order to use RA and have access to `rustc_*` crates, you also
+# need to set `"rust-analyzer.rustcSource": "discover"` in e.g. VSCode.
+[package.metadata.rust-analyzer]
+# This crate uses #[feature(rustc_private)]
+rustc_private = true

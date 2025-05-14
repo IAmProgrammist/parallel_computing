@@ -1,0 +1,22 @@
+[package]
+name = "compute-runner"
+version = "0.0.0"
+publish = false
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# See rustc_codegen_spirv/Cargo.toml for details on these features
+[features]
+default = ["use-compiled-tools"]
+use-installed-tools = ["spirv-builder/use-installed-tools"]
+use-compiled-tools = ["spirv-builder/use-compiled-tools"]
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+cfg-if = "1.0.0"
+spirv-builder = { workspace = true, default-features = false }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+ash-molten = { version = "0.20", features = ["pre-built"] }
