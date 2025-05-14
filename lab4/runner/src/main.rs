@@ -76,6 +76,7 @@ use opencl3::error_codes::ClError;
 
 use std::fs::File;
 use std::io::Read;
+use std::ops::Deref;
 use std::path::PathBuf;
 
 use spirv_builder::{MetadataPrintout, SpirvBuilder};
@@ -126,13 +127,13 @@ pub fn main() {
         .map(|file| -> OpenCLBinaries {
             let mut f = File::open(file.data.to_str().unwrap())
             .expect("Couln't open SPIR-V binary");
-            let mut spirv_shader = String::new();
+            let mut spirv_shader = Vec::new();
 
-            f.read_to_string(&mut spirv_shader)
-            .expect("Reading SPIR-V binary failed");
+            f.read_to_end(&mut spirv_shader)
+                .expect("Reading SPIR-V binary failed");
 
             // Build the OpenCL program source and create the kernel.
-            let program = Program::create_and_build_from_source(&context, &spirv_shader, "")
+            let program = Program::create_and_build_from_il(&context,&spirv_shader[..], "")
                 .expect("Program::create_and_build_from_source failed");
             let kernel = Kernel::create(&program, file.name.as_str())
             .expect("Kernel::create failed");
@@ -157,7 +158,7 @@ pub fn compile_shaders() -> Vec<SpvFile> {
 
     SpirvBuilder::new(
         concat!(env!("CARGO_MANIFEST_DIR"), "/../shader"),
-        "spirv-unknown-spv1.5",
+        "spirv-unknown-vulkan1.1",
     )
     .print_metadata(MetadataPrintout::None)
     .shader_panic_strategy(spirv_builder::ShaderPanicStrategy::DebugPrintfThenExit {
@@ -176,7 +177,7 @@ pub fn compile_shaders() -> Vec<SpvFile> {
         println!("{} {}", name, path.to_str().unwrap());
 
         return SpvFile {
-            name: format!("shader::{name}"),
+            name: name.clone(),
             data: path.to_path_buf(),
         };
     })

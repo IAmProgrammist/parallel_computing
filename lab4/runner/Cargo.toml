@@ -20,7 +20,7 @@ spirv-builder = { workspace = true, default-features = false }
 
 [dependencies.opencl3]
 version = "0.11"
-features = ["CL_VERSION_3_0"]
+features = ["CL_VERSION_2_1"]
 
 [target.'cfg(target_os = "macos")'.dependencies]
 ash-molten = { version = "0.20", features = ["pre-built"] }
