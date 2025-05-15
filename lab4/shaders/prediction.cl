@@ -1,5 +1,5 @@
 float sigmoid(float x) {
-    return 1. / (1. / exp(-x));
+    return 1. / (1. + exp(-x));
 }
 
 __kernel void prediction(__global const float* input_x,
@@ -14,7 +14,9 @@ __kernel void prediction(__global const float* input_x,
     int group_size = get_local_size(0);
 
     float val = 0.0f;
-    if (local_id < NODES_AMOUNT) val = input_x[group_id * NODES_AMOUNT + local_id] * input_weights[local_id] + bias;
+    if (local_id < NODES_AMOUNT) 
+        val = input_x[group_id * NODES_AMOUNT + local_id] * input_weights[local_id];
+    
     local_data[local_id] = val;
 
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -26,5 +28,5 @@ __kernel void prediction(__global const float* input_x,
     }
 
     if (!local_id) 
-        predictions[group_id] = sigmoid(local_data[0]);
+        predictions[group_id] = sigmoid(local_data[0] + bias);
 }
