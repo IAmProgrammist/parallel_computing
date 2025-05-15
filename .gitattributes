@@ -1,3 +1,0 @@
-# configure GitHub linguist (language bar) https://github.com/github/linguist#overrides
-docs/* linguist-documentation
-* text=auto eol=lf
