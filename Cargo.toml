@@ -8,7 +8,7 @@ rand = "0.9.1"
 
 [dependencies.opencl3]
 version = "0.11"
-features = ["CL_VERSION_3_0"]
+features = ["CL_VERSION_2_1"]
 
 [[bin]]
 name="lab4"
