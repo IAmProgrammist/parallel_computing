@@ -2,9 +2,9 @@ mod neurals;
 
 use crate::neurals::neural::NeuralNetwork;
 
-const TRAIN_DATA_PATH: &str = "./lab4/datasets/train_data";
+const TRAIN_DATA_PATH: &str = "./lab4/datasets/train_data_160";
 const LABELS_PATH: &str = "./lab4/datasets/labels";
-const EPOCHS: usize = 1000;
+const EPOCHS: usize = 100000;
 const LEARNING_RATE: f32 = 0.1;
 
 fn load_data() -> Result<(Vec<Vec<f32>>, Vec<f32>), String> {
