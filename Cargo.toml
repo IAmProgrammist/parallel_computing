@@ -1,0 +1,15 @@
+[package]
+name = "lab4"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+rand = "0.9.1"
+
+[dependencies.opencl3]
+version = "0.11"
+features = ["CL_VERSION_2_1"]
+
+[[bin]]
+name="lab4"
+path="./lab4/main.rs"
